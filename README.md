@@ -2,3 +2,8 @@
 
 # UBM
 A modified version of the Basin Characterization Model (BCM) to calculate recharge and runoff
+
+
+to install 
+
+>>>pip install https://github.com/inkenbrandt/UBM/zipball/master
