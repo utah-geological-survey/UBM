@@ -30,6 +30,6 @@ setup(name=__name__,
       author_email = 'paulinkenbrandt@utah.gov',
       url = 'https://github.com/inkenbrandt/UBM',
       license = 'LICENSE.txt',
-      install_requires=["bs4 >= 4.5.3",
+      install_requires=["bs4",
                         "pymodis >= 2.0.4"],
       packages = find_packages(exclude=['contrib', 'docs', 'tests*']))
