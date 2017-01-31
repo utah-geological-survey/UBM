@@ -80,3 +80,28 @@ def UBM_calc(results, field_cap, wilt_point, T_soil_water, geol_k, avail_water, 
             av_soil_water = Con(av_soil_water > 0.0, av_soil_water, 0.0)
             av_soil_water.save(results + 'asw' + my)
             print(my)
+
+def summarize(path, code, statistics='MEAN'):
+    arcpy.env.workspace = path
+    arcpy.env.overwriteOutput = True
+
+    rlist = arcpy.ListRasters(code+"*") #pick all files from raw data folder of a data type
+    # arcpy sa functions that summarize the daily data to monthly data
+    calc = CellStatistics(rlist, statistics_type = statistics, ignore_nodata="DATA")
+    outnm = code+"_"+statistics
+    calc.save(outnm)
+    print(outnm)
+
+
+def monthly_to_yearly(path, code, yearRange='', statistics='SUM'):
+    if yearRange=='':
+        yearRange = [2004,2014]
+    arcpy.env.workspace = path
+    arcpy.env.overwriteOutput = True
+    for y in range(yearRange[0],yearRange[1]+1): #set years converted here
+        ylist = arcpy.ListRasters(code+str(y)+"*") #pick all files from raw data folder of a data type
+        calc = CellStatistics(ylist, statistics_type = statistics, ignore_nodata="DATA")
+        outnm = 'y'+code+str(y)
+        desc = arcpy.Describe(calc)
+        print(outnm)
+        calc.save(outnm)
