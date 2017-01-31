@@ -1,2 +1,5 @@
 bs4
 pymodis
+pandas
+numpy
+sqlalchemy
