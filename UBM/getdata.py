@@ -273,7 +273,7 @@ def rename_polaris_snodas(path):
 
 def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', monthRange=[1, 12], yearRange=[2003, 2016],
                 path="H:/GIS/SNODAS/SNWDS/", outpath="H:/GIS/SNODAS.gdb/"):
-    '''
+    """
     summarizes daily SNODAS data to monthly values
 
     INPUT
@@ -291,10 +291,12 @@ def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', mont
     ------
     projected and scaled monthly rasters
 
-    '''
+    """
     g = {}
     arcpy.env.workspace = path
     arcpy.env.overwriteOutput = True
+    area = 'H:/GIS/Calc.gdb/WBD_UT'
+    # arcpy.env.mask = area
 
     statstype = {'MEAN': 'AVG', 'MAJORITY': 'MAJ', 'MAXIMUM': 'MAX', 'MEDIAN': 'MED', 'MINIMUM': 'MIN',
                  'MINORITY': 'MNR',
@@ -311,18 +313,26 @@ def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', mont
                 else:
                     pass
             if len(g[code + str(y) + str(m).zfill(2)]) > 0:
-                print(g[code + str(y) + str(m).zfill(2)])
+                # print(g[code+str(y)+str(m).zfill(2)])
+                # ifnull = 'in_memory/ifnull'
                 # arcpy sa functions that summarize the daily data to monthly data
-                calc = CellStatistics(g[code + str(y) + str(m).zfill(2)], statistics_type=statistics,
-                                      ignore_nodata="DATA")
-                calc = Divide(calc, scalingFactor)  # scale factor, converts to kg/m2 10 then to m 0.001
-                calc = Con(calc < 0.0, 0.0, calc)  # remove negative and null values
-                calc = Con(IsNull(calc), 0, calc)  # remove null
-                outCS = arcpy.SpatialReference(
-                    'NAD 1983 UTM Zone 12N')  # change coordinate units to m for spatial analysis
+                cellstats = CellStatistics(g[code + str(y) + str(m).zfill(2)], statistics_type=statistics,
+                                           ignore_nodata="DATA")
+                # Execute ExtractByMask to clip snodas data to Utah watersheds
+                div = Divide(cellstats, scalingFactor)  # scale factor, converts to kg/m2 10 then to m 0.001
+                calc = Con(div < 0.0, 0.0, div)  # remove negative and null values
+                ifnull = Con(IsNull(calc), 0, calc)  # remove null
+                # WKID 102039
+                outCS = arcpy.SpatialReference(102039)  # change coordinate units to m for spatial analysis
                 outnm = outpath + rast[0:4] + str(y).zfill(2) + str(m).zfill(2) + statstype[statistics]
-                arcpy.ProjectRaster_management(calc, outnm, outCS, 'BILINEAR', outcellsize,
+                memoryFeature = "in_memory/myMemoryFeature"
+                # memoryFeature = outnm
+                arcpy.ProjectRaster_management(ifnull, memoryFeature, outCS, 'BILINEAR', outcellsize,
                                                'WGS_1984_(ITRF00)_To_NAD_1983', '#', '#')
+                extrc = arcpy.sa.ExtractByMask(memoryFeature, area)
+                extrc.save(outnm)
+                print(outnm)
+                arcpy.Delete_management("in_memory")
 
 
 def totalavg(code, statistics="MEAN", monthRange=[1, 12], yearRange=[2003, 2016],
