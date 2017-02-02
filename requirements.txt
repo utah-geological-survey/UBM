@@ -3,3 +3,4 @@ pymodis
 pandas
 numpy
 sqlalchemy
+lxml

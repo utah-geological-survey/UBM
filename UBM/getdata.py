@@ -12,34 +12,47 @@ import os
 import arcpy
 from arcpy.sa import *
 
+
 def get_modis(tiles, save_path, months='', years=''):
+    """The following script automatically retrieves monthly MODIS16 hdf file from the ntsg website.
+
+    :param tiles: Tile number in format h##v##; based on grid from https://modis-land.gsfc.nasa.gov/MODLAND_grid.html
+    :param save_path: name of output file name
+    :param months: months of interest; defaults to [1,12]
+    :param years: years of interest; defaults to [2000,2015]
+    :return: saves files in outpath
+    """
+
+
     from bs4 import BeautifulSoup
     if months == '':
-        months = [1,12]
+        months = [1, 12]
     if years == '':
-        years = [2000,2015]
+        years = [2000, 2015]
 
-    mons = [str(i).zfill(2) for i in range(months[0],months[1]+1)]
-    yrs = [str(i) for i in range(years[0],years[1]+1)]
+    mons = [str(i).zfill(2) for i in range(months[0], months[1] + 1)]
+    yrs = [str(i) for i in range(years[0], years[1] + 1)]
 
     for tile in tiles:
         for yr in yrs:
             for m in mons:
                 base_url = "http://files.ntsg.umt.edu/data/NTSG_Products/MOD16/MOD16A2_MONTHLY.MERRA_GMAO_1kmALB/"
 
-                dir_path = "Y{:}/M{:}/".format(yr,m)
-                url = base_url+dir_path
-                soup=BeautifulSoup(urllib2.urlopen(url),"lxml")
-                hdf_name = soup.find_all('', {'href':re.compile('MOD16A2.A{:}M{:}.{:}.105'.format(yr,m,tile), re.IGNORECASE)})
-                files = urllib.urlretrieve(url+hdf_name[0].text, save_path + hdf_name[0].text)
-                print(save_path+hdf_name[0].text)
+                dir_path = "Y{:}/M{:}/".format(yr, m)
+                url = base_url + dir_path
+                soup = BeautifulSoup(urllib2.urlopen(url), "lxml")
+                hdf_name = soup.find_all('', {
+                    'href': re.compile('MOD16A2.A{:}M{:}.{:}.105'.format(yr, m, tile), re.IGNORECASE)})
+                files = urllib.urlretrieve(url + hdf_name[0].text, save_path + hdf_name[0].text)
+                print(save_path + hdf_name[0].text)
                 time.sleep(0.5)
+
 
 def get_file_list(save_path):
     return glob.glob(os.path.join(save_path, '*.105*.hdf'))
 
 
-def reproject_modis(files, save_path, data_type, proj=26912):
+def reproject_modis(files, save_path, data_type, proj=102003):
     """Iterates through MODIS files in a folder reprojecting them.
 
     Takes the crazy MODIS sinusoidal projection to a user defined projection.
@@ -52,6 +65,11 @@ def reproject_modis(files, save_path, data_type, proj=26912):
     Returns:
         Reprojected MODIS files
 
+    ..notes:
+    The EPSG code for NAD83 Zone 12 is 26912.
+    The EPSG code for Albers Equal Area is 102003
+    http://files.ntsg.umt.edu/data/NTSG_Products/MOD16/MOD16_global_evapotranspiration_description.pdf
+    https://modis-land.gsfc.nasa.gov/MODLAND_grid.html
     """
     import pymodis
     # dictionary to designate a directory
@@ -88,6 +106,7 @@ def clip_and_fix(path, outpath, data_type, area=''):
         path: folder of the reprojected MODIS files
         outpath: ESRI gdb to store the clipped files
         data_type: type of MODIS16 data being reprojected; options are 'ET','PET','LE', and 'PLE'
+        area: path to polygon used to clip tiles
 
     """
     # Check out the ArcGIS Spatial Analyst extension license
@@ -97,7 +116,7 @@ def clip_and_fix(path, outpath, data_type, area=''):
     arcpy.env.overwriteOutput = True
 
     if area == '':
-        area = 'H:/GIS/NHD_UT_Proj.gdb/UT_HUC_area'
+        area = 'H:/GIS/Calc.gdb/WBD_UT'
 
     arcpy.env.mask = area
     arcpy.CheckOutExtension("spatial")
@@ -107,11 +126,16 @@ def clip_and_fix(path, outpath, data_type, area=''):
         print(outpath + data_type + rast[1:5] + rast[6:8] + 'h' + rast[10:11] + 'v' + rast[13:14])
 
 
-def merge_rasts(path, data_type='ET', monthRange=[1, 12], yearRange=[2000, 2014]):
+def merge_rasts(path, data_type='ET', monthRange='', yearRange=''):
     """Mosaics (merges) different MODIS cells into one layer.
 
 
     """
+    if monthRange == '':
+        months = [1, 12]
+    if yearRange == '':
+        years = [2000, 2015]
+
     arcpy.env.workspace = path
     outCS = arcpy.SpatialReference('NAD 1983 UTM Zone 12N')
     for y in range(yearRange[0], yearRange[-1] + 1):  # set years converted here
@@ -130,7 +154,7 @@ def merge_rasts(path, data_type='ET', monthRange=[1, 12], yearRange=[2000, 2014]
                 pass
 
 
-def scale_modis(path, out_path, scaleby = 10000.0, data_type = 'ET', monthRange = [1,12], yearRange = [2000,2014]):
+def scale_modis(path, out_path, scaleby=10000.0, data_type='ET', monthRange=[1, 12], yearRange=[2000, 2014]):
     """
 
     :param path: directory to unconverted modis tiles
@@ -143,11 +167,11 @@ def scale_modis(path, out_path, scaleby = 10000.0, data_type = 'ET', monthRange 
     """
     arcpy.CheckOutExtension("spatial")
 
-    for y in range(yearRange[0],yearRange[-1]+1): #set years converted here
-        for m in range(monthRange[0],monthRange[-1]+1): #set months converted here
+    for y in range(yearRange[0], yearRange[-1] + 1):  # set years converted here
+        for m in range(monthRange[0], monthRange[-1] + 1):  # set months converted here
             nm = data_type + str(y) + str(m).zfill(2)
             calc = Divide(nm + 'c', scaleby)
-            calc.save(out_path+nm)
+            calc.save(out_path + nm)
 
 
 def untar(filepath, outfoldername='.', compression='r', deletesource=False):
@@ -212,6 +236,7 @@ def replace_hdr_file(hdrfile):
     with open(hdrfile, 'w') as o:
         o.write(HDRFILE_STRING)
 
+
 def get_snodas(out_dir, months='', years=''):
     """Downloads daily SNODAS data from ftp.  This is slow.
 
@@ -226,14 +251,14 @@ def get_snodas(out_dir, months='', years=''):
     import ftplib
 
     if months == '':
-        months = [1,12]
+        months = [1, 12]
     if years == '':
-        years = [2000,2015]
+        years = [2000, 2015]
 
-    monnames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-    mons = [str(i).zfill(2) + "_" + monnames[i-1] for i in range(months[0],months[1]+1)]
+    monnames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    mons = [str(i).zfill(2) + "_" + monnames[i - 1] for i in range(months[0], months[1] + 1)]
 
-    yrs = [str(i) for i in range(years[0],years[1]+1)]
+    yrs = [str(i) for i in range(years[0], years[1] + 1)]
 
     for yr in yrs:
         for m in mons:
@@ -247,32 +272,33 @@ def get_snodas(out_dir, months='', years=''):
 
             for f in files:
                 if len(f) > 4:
-                    save_file = open(out_dir + "/" + f,'wb')
-                    ftp.retrbinary("RETR "+f, save_file.write)
+                    save_file = open(out_dir + "/" + f, 'wb')
+                    ftp.retrbinary("RETR " + f, save_file.write)
                     save_file.close()
                     print(f)
             ftp.close()
 
+
 def rename_polaris_snodas(path):
-    prodcode = {'us_ssmv11038wS__A':'SPAT', 'us_ssmv11044bS__T':'SNML', 'us_ssmv11050lL00T':'SPSB',
-                'us_ssmv11034tS__T':'SWEQ', 'us_ssmv01025SlL00':'RAIN', 'us_ssmv01025SlL01':'SNOW',
-                'us_ssmv11036tS__T':'SNOD', 'us_ssmv11039lL00T':'BSSB'}
+    prodcode = {'us_ssmv11038wS__A': 'SPAT', 'us_ssmv11044bS__T': 'SNML', 'us_ssmv11050lL00T': 'SPSB',
+                'us_ssmv11034tS__T': 'SWEQ', 'us_ssmv01025SlL00': 'RAIN', 'us_ssmv01025SlL01': 'SNOW',
+                'us_ssmv11036tS__T': 'SNOD', 'us_ssmv11039lL00T': 'BSSB'}
 
     for filename in os.listdir(path):
         if filename.startswith("us_ssmv"):
             code = prodcode[filename[0:17]]
             yrsrt = filename.find('TNATS') + 5
-            yr = filename[yrsrt:yrsrt+4]
-            mo = filename[yrsrt+4:yrsrt+6]
-            dy = filename[yrsrt+6:yrsrt+8]
+            yr = filename[yrsrt:yrsrt + 4]
+            mo = filename[yrsrt + 4:yrsrt + 6]
+            dy = filename[yrsrt + 6:yrsrt + 8]
             try:
-                os.rename(os.path.join(path, filename), os.path.join(path,code+yr+mo+dy+filename[-4:]))
+                os.rename(os.path.join(path, filename), os.path.join(path, code + yr + mo + dy + filename[-4:]))
             except:
                 pass
 
 
-def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', monthRange=[1, 12], yearRange=[2003, 2016],
-                path="H:/GIS/SNODAS/SNWDS/", outpath="H:/GIS/SNODAS.gdb/"):
+def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', monthRange='', yearRange='',
+                 path="H:/GIS/SNODAS/SNWDS/", outpath="H:/GIS/SNODAS.gdb/", area=''):
     """
     summarizes daily SNODAS data to monthly values
 
@@ -292,10 +318,16 @@ def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', mont
     projected and scaled monthly rasters
 
     """
+    if monthRange == '':
+        months = [1, 12]
+    if yearRange == '':
+        years = [2000, 2015]
+
     g = {}
     arcpy.env.workspace = path
     arcpy.env.overwriteOutput = True
-    area = 'H:/GIS/Calc.gdb/WBD_UT'
+    if area == '':
+        area = 'H:/GIS/Calc.gdb/WBD_UT'
     # arcpy.env.mask = area
 
     statstype = {'MEAN': 'AVG', 'MAJORITY': 'MAJ', 'MAXIMUM': 'MAX', 'MEDIAN': 'MED', 'MINIMUM': 'MIN',
@@ -318,17 +350,18 @@ def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', mont
                 # arcpy sa functions that summarize the daily data to monthly data
                 cellstats = CellStatistics(g[code + str(y) + str(m).zfill(2)], statistics_type=statistics,
                                            ignore_nodata="DATA")
-                # Execute ExtractByMask to clip snodas data to Utah watersheds
                 div = Divide(cellstats, scalingFactor)  # scale factor, converts to kg/m2 10 then to m 0.001
                 calc = Con(div < 0.0, 0.0, div)  # remove negative and null values
                 ifnull = Con(IsNull(calc), 0, calc)  # remove null
                 # WKID 102039
                 outCS = arcpy.SpatialReference(102039)  # change coordinate units to m for spatial analysis
+                # define save path for file
                 outnm = outpath + rast[0:4] + str(y).zfill(2) + str(m).zfill(2) + statstype[statistics]
                 memoryFeature = "in_memory/myMemoryFeature"
                 # memoryFeature = outnm
                 arcpy.ProjectRaster_management(ifnull, memoryFeature, outCS, 'BILINEAR', outcellsize,
                                                'WGS_1984_(ITRF00)_To_NAD_1983', '#', '#')
+                # Execute ExtractByMask to clip snodas data to Utah watersheds
                 extrc = arcpy.sa.ExtractByMask(memoryFeature, area)
                 extrc.save(outnm)
                 print(outnm)
@@ -337,8 +370,7 @@ def snow_summary(code, scalingFactor, statistics="SUM", outcellsize='1000', mont
 
 def totalavg(code, statistics="MEAN", monthRange=[1, 12], yearRange=[2003, 2016],
              path="H:/GIS/SNODAS/SNODASproj.gdb/", outpath="H:/GIS/SNODAS/SNODASproj.gdb/"):
-    """
-    Summarizes daily raster data into monthly data.
+    """Summarizes daily raster data into monthly data.
 
     INPUT
     -----
@@ -384,4 +416,3 @@ def totalavg(code, statistics="MEAN", monthRange=[1, 12], yearRange=[2003, 2016]
             calc = CellStatistics(g[code + '0000' + str(m).zfill(2)], statistics_type=statistics, ignore_nodata="DATA")
             calc.save(code + '0000' + str(m).zfill(2) + statstype[statistics])
             print(code + '0000' + str(m).zfill(2) + statstype[statistics])
-
