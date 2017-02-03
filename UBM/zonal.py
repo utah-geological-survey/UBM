@@ -288,3 +288,6 @@ def plotfits(HUC, SITE, engine, fileloc):
     pdf.close()
 
     return UBM, acft, UBMmon, acgp, mrg
+
+if __name__ == '__main__':
+    main()

@@ -416,3 +416,6 @@ def totalavg(code, statistics="MEAN", monthRange=[1, 12], yearRange=[2003, 2016]
             calc = CellStatistics(g[code + '0000' + str(m).zfill(2)], statistics_type=statistics, ignore_nodata="DATA")
             calc.save(code + '0000' + str(m).zfill(2) + statstype[statistics])
             print(code + '0000' + str(m).zfill(2) + statstype[statistics])
+
+if __name__ == '__main__':
+    main()

@@ -105,3 +105,6 @@ def monthly_to_yearly(path, code, yearRange='', statistics='SUM'):
         desc = arcpy.Describe(calc)
         print(outnm)
         calc.save(outnm)
+
+if __name__ == '__main__':
+    main()
