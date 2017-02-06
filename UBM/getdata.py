@@ -126,15 +126,17 @@ def clip_and_fix(path, outpath, data_type, area=''):
         print(outpath + data_type + rast[1:5] + rast[6:8] + 'h' + rast[10:11] + 'v' + rast[13:14])
 
 
-def merge_rasts(path, data_type='ET', monthRange='', yearRange=''):
+def merge_rasts(path, data_type='ET', monthRange='', yearRange='', outpath=''):
     """Mosaics (merges) different MODIS cells into one layer.
 
 
     """
     if monthRange == '':
-        months = [1, 12]
+        monthRange = [1, 12]
     if yearRange == '':
-        years = [2000, 2015]
+        yearRange = [2000, 2015]
+    if outpath == '':
+        outpath = path
 
     arcpy.env.workspace = path
     outCS = arcpy.SpatialReference('NAD 1983 UTM Zone 12N')
@@ -145,7 +147,7 @@ def merge_rasts(path, data_type='ET', monthRange='', yearRange=''):
             for rast in arcpy.ListRasters(nm + '*'):
                 rlist.append(rast)
             try:
-                arcpy.MosaicToNewRaster_management(rlist, path, nm + 'c', outCS, \
+                arcpy.MosaicToNewRaster_management(rlist, outpath, nm + 'c', outCS, \
                                                    "16_BIT_UNSIGNED", "1000", "1", "LAST", "LAST")
 
                 print(path + nm + 'c')
