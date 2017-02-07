@@ -206,7 +206,7 @@ def get_UBM_data(HUC, engine, table):
 
 def get_model_inputs(HUC,engine,table):
     HUC, huc10 = process_huc(HUC)
-    UBM = get_UBM_data(HUC, engine)[0]
+    UBM = get_UBM_data(HUC, engine, table)[0]
     # This section pulls the individual model inputs and plots them (third figure)
     quer = "SELECT HUC_12,YearMonth,volume_acft,SOURCE,AREA,variable FROM ubm.{:} WHERE HUC_10 IN({:}) AND SOURCE IN({:})"
     sources = "'Surrgo','State Geologic Maps','SNODAS','MODIS16'"
