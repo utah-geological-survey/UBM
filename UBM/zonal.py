@@ -3,10 +3,19 @@ import pandas as pd
 import wellapplication as wa
 import numpy as np
 import matplotlib.pyplot as plt
-from sqlalchemy import create_engine
 
 
 def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
+    """Calculates volume of water per zone in ac-ft. Uses output from zone_gdb. Created pandas DataFrame.
+
+    :param tablegdb: Path to file geodatabase in which tables are stored
+    :param searchstr: Search wildcard to select a subset of input tables; use astrix (*) for any string after search string
+    :param source: Designate name of data source field
+    :param variable: Designate name of data variable; ex. 'runoff'
+    :param stat: Type of statistic to bring into calculations; default is 'MEAN'
+    :param mult: Multiplier to adjust values of input
+    :return: pandas DataFrame of zonal values in ac-ft
+    """
     arcpy.env.workspace = tablegdb
     tables = arcpy.ListTables(searchstr)
     fields = arcpy.ListFields(tables[0])
@@ -31,11 +40,25 @@ def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
     # g['dt'] = pd.to_datetime(g.YearMonth,errors='coerce',format='%Y%m')
     return g
 
+def get_zone(rast, z_Name, Zonal_HUCS, Zone_field):
+    dsc = arcpy.Describe(rast)
+    nm = dsc.baseName
+    arcpy.sa.ZonalStatisticsAsTable(Zonal_HUCS, Zone_field, rast, z_Name + "/z_" + nm, "DATA", "ALL")
+    print("z_" + nm)
+
 def zone_gdb(indata, z_Name, Zonal_HUCS, Zone_field, wildcard='*'):
+    """Creates geodatabase of tables summarizing zonal statistics from rasters.
+
+    :param indata: Geodatabase containing rasters to summarize with zonal statistics
+    :param z_Name: Output geodatabase for zonal statistics tables
+    :param Zonal_HUCS: Polygons used to conduct zonal statistics
+    :param Zone_field: Field in Zonal_HUCS to summarize zonal statistics
+    :param wildcard: Wildcard to select subset of rasters
+    :return: zonal statistics tables (1 for each raster)
+    """
     arcpy.env.workspace = indata
     arcpy.CheckOutExtension("Spatial")
     arcpy.env.overwriteOutput = True
-
 
     for rast in arcpy.ListRasters(wildcard):
         dsc = arcpy.Describe(rast)
@@ -138,7 +161,7 @@ def process_huc(HUC):
 
 def get_usgs_data(SITE, strtDT=''):
     # Grab USGS data for comparison
-    if strtDT =='':
+    if strtDT == '':
         strtDT = '2003-01-01'
 
     nw = wa.nwis('dv', SITE, 'sites', startDT=strtDT)
@@ -181,14 +204,14 @@ def get_UBM_data(HUC, engine):
 
     return UBM, UBMgrp
 
-def get_model_inputs(HUC,engine):
+def get_model_inputs(HUC,engine,table):
     HUC, huc10 = process_huc(HUC)
     UBM = get_UBM_data(HUC, engine)[0]
     # This section pulls the individual model inputs and plots them (third figure)
-    quer = "SELECT HUC_12,YearMonth,volume_acft,SOURCE,AREA,variable FROM ubm.bdgt WHERE HUC_10 IN({:}) AND SOURCE IN({:})"
+    quer = "SELECT HUC_12,YearMonth,volume_acft,SOURCE,AREA,variable FROM ubm.{:} WHERE HUC_10 IN({:}) AND SOURCE IN({:})"
     sources = "'Surrgo','State Geologic Maps','SNODAS','MODIS16'"
 
-    chk = pd.read_sql_query(sql=quer.format(','.join(huc10), sources), con=engine)
+    chk = pd.read_sql_query(sql=quer.format(table,','.join(huc10), sources), con=engine)
     chk = chk[chk['HUC_12'].isin(HUC)]
     chk['dt'] = pd.to_datetime(chk.YearMonth, errors='coerce', format='%Y%m')
 
@@ -238,11 +261,11 @@ def plotfits(HUC, SITE, engine, fileloc):
 
     pdf = PdfPages(fileloc + str(HUC[0])[:-2] + '.pdf')
 
-    UBM, UBMgrp = get_UBM_data(HUC,engine)
+    ubm, UBMgrp = get_UBM_data(HUC,engine)
     acft, label = get_usgs_data(SITE)
 
-    UBM.reset_index(inplace=True)
-    UBM.dropna(inplace=True)
+    ubm.reset_index(inplace=True)
+    ubm.dropna(inplace=True)
 
     # get monthly average values (plot 2)
     UBMmon = UBMgrp.groupby('month').mean()
@@ -289,7 +312,7 @@ def plotfits(HUC, SITE, engine, fileloc):
     plt.close()
     pdf.close()
 
-    return UBM, acft, UBMmon, acgp, mrg
+    return ubm, acft, UBMmon, acgp, mrg
 
 if __name__ == '__main__':
     main()
