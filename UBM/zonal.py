@@ -28,14 +28,14 @@ def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
     g = pd.concat(f)
     g.reset_index(inplace=True)
 
-    g['YearMonth'] = g['level_0'].apply(lambda x: str(x)[-9:-3] if str(x)[-3: ] =='SUM' else str(x)[-6:] ,1)
+    g['YearMonth'] = g['level_0'].apply(lambda x: str(x)[-9:-3] if str(x)[-3:] == 'SUM' else str(x)[-6:] ,1)
     g['HUC_10'] = g['HUC_12'].apply(lambda x: str(x)[:-2] ,1)
     g['HUC_08'] = g['HUC_12'].apply(lambda x: str(x)[:-4] ,1)
-    g.drop(['level_0' ,'level_1' ,'OBJECTID' ,'ZONE_CODE'] ,axis=1 ,inplace=True)
+    g.drop(['level_0', 'level_1', 'OBJECTID', 'ZONE_CODE'], axis=1, inplace=True)
     g['SOURCE'] = source
     g['variable'] = variable
     g['volume_m_cubed'] = g[stat] * g['AREA'] * mult
-    g['volume_acft'] = g['volume_m_cubed' ] *0.000810714
+    g['volume_acft'] = g['volume_m_cubed'] * 0.000810714
     # g = g[(~g.YearMonth.str.contains('yr'))]
     # g['dt'] = pd.to_datetime(g.YearMonth,errors='coerce',format='%Y%m')
     return g
@@ -97,6 +97,7 @@ def runModel(mrg, geo_k=''):
             melt = grp[h].ix[i, 'snowmelt']
             pet = grp[h].ix[i, 'evapotranspiration']
             if i == dates[0]:
+
                 avail_water = rain + melt + field_cap
             elif i.month == 1:
                 avail_water = rain + melt + grp[h].ix[pd.datetime(i.year - 1, 12, 1), 'avail_water']
