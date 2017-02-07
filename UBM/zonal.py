@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 from sqlalchemy import create_engine
 
 
-def calcvols(searchStr ,source ,variable, stat='MEAN', mult = 1.0):
-    tables = arcpy.ListTables(searchStr)
+def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
+    arcpy.env.workspace = tablegdb
+    tables = arcpy.ListTables(searchstr)
     fields = arcpy.ListFields(tables[0])
     # for table in prism_tables:
     fieldlist = [field.name for field in fields]
@@ -24,7 +25,7 @@ def calcvols(searchStr ,source ,variable, stat='MEAN', mult = 1.0):
     g.drop(['level_0' ,'level_1' ,'OBJECTID' ,'ZONE_CODE'] ,axis=1 ,inplace=True)
     g['SOURCE'] = source
     g['variable'] = variable
-    g['volume_m_cubed'] = g[stat ] *g['AREA' ]* mult
+    g['volume_m_cubed'] = g[stat] * g['AREA'] * mult
     g['volume_acft'] = g['volume_m_cubed' ] *0.000810714
     # g = g[(~g.YearMonth.str.contains('yr'))]
     # g['dt'] = pd.to_datetime(g.YearMonth,errors='coerce',format='%Y%m')
@@ -33,12 +34,13 @@ def calcvols(searchStr ,source ,variable, stat='MEAN', mult = 1.0):
 def zone_gdb(indata, z_Name, Zonal_HUCS, Zone_field, wildcard='*'):
     arcpy.env.workspace = indata
     arcpy.CheckOutExtension("Spatial")
+    arcpy.env.overwriteOutput = True
 
 
     for rast in arcpy.ListRasters(wildcard):
         dsc = arcpy.Describe(rast)
         nm = dsc.baseName
-        arcpy.sa.ZonalStatisticsAsTable(Zonal_HUCS, Zone_field, rast, z_Name + "z_" + nm, "DATA", "MEAN")
+        arcpy.sa.ZonalStatisticsAsTable(Zonal_HUCS, Zone_field, rast, z_Name + "/z_" + nm, "DATA", "ALL")
         print("z_" + nm)
 
 
