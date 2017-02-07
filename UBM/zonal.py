@@ -177,14 +177,14 @@ def get_usgs_data(SITE, strtDT=''):
 
     return acft, label
 
-def get_UBM_data(HUC, engine):
+def get_UBM_data(HUC, engine, table):
     HUC, huc10 = process_huc(HUC)
-    quer = "SELECT HUC_12,YearMonth,volume_acft FROM ubm.bdgt WHERE SOURCE = '{:}' AND HUC_10 IN({:}) AND variable IN('{:}')"
+    quer = "SELECT HUC_12,YearMonth,volume_acft FROM ubm.{:} WHERE SOURCE = '{:}' AND HUC_10 IN({:}) AND variable IN('{:}')"
     dataset = 'UBM'
     variable = 'recharge'
-    Urc = pd.read_sql_query(sql=quer.format(dataset, ','.join(huc10), variable), con=engine)
+    Urc = pd.read_sql_query(sql=quer.format(table, dataset, ','.join(huc10), variable), con=engine)
     variable = 'runoff'
-    Urn = pd.read_sql_query(sql=quer.format(dataset, ','.join(huc10), variable), con=engine)
+    Urn = pd.read_sql_query(sql=quer.format(table, dataset, ','.join(huc10), variable), con=engine)
 
     Urun = Urn[Urn['HUC_12'].isin(HUC)]
     Urun = Urun.rename(columns={'volume_acft': 'runoff_acft'})
@@ -252,7 +252,7 @@ def merge_huc(mrg):
     mrg_grp.columns = mrg_grp.columns.droplevel(-1)
     return mrg_grp
 
-def plotfits(HUC, SITE, engine, fileloc):
+def plotfits(HUC, SITE, engine, fileloc, table):
     from matplotlib.backends.backend_pdf import PdfPages
 
     HUC = [str(i) for i in HUC]
@@ -261,7 +261,7 @@ def plotfits(HUC, SITE, engine, fileloc):
 
     pdf = PdfPages(fileloc + str(HUC[0])[:-2] + '.pdf')
 
-    ubm, UBMgrp = get_UBM_data(HUC,engine)
+    ubm, UBMgrp = get_UBM_data(HUC, engine, table)
     acft, label = get_usgs_data(SITE)
 
     ubm.reset_index(inplace=True)
@@ -295,7 +295,7 @@ def plotfits(HUC, SITE, engine, fileloc):
     pdf.savefig()
     plt.close()
 
-    mrg = get_model_inputs(HUC, engine)
+    mrg = get_model_inputs(HUC, engine, table)
     mrg_grp = merge_huc(mrg)
 
 
