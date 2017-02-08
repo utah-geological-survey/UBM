@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
+def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0, prop = False):
     """Calculates volume of water per zone in ac-ft. Uses output from zone_gdb. Created pandas DataFrame.
 
     :param tablegdb: Path to file geodatabase in which tables are stored
@@ -34,7 +34,10 @@ def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0):
     g.drop(['level_0', 'level_1', 'OBJECTID', 'ZONE_CODE'], axis=1, inplace=True)
     g['SOURCE'] = source
     g['variable'] = variable
-    g['volume_m_cubed'] = g[stat] * g['AREA'] * mult
+    if prop:
+        g['volume_m_cubed'] = g['MEAN'] * mult
+    else:
+        g['volume_m_cubed'] = g[stat] * g['AREA'] * mult
     g['volume_acft'] = g['volume_m_cubed'] * 0.000810714
     # g = g[(~g.YearMonth.str.contains('yr'))]
     # g['dt'] = pd.to_datetime(g.YearMonth,errors='coerce',format='%Y%m')
@@ -119,14 +122,16 @@ def runModel(mrg, geo_k=''):
                     grp[h].ix[i, 'runoff'] = avail_water - soil_max
                     grp[h].ix[i, 'recharge'] = avail_rech
             elif (avail_water < soil_max) and (avail_water > field_cap):
-                grp[h].ix[i, 'eqt'] = 2
+
                 avail_rech = avail_water - field_cap
                 grp[h].ix[i, 'aet'] = pet
 
                 if avail_rech > geo_k:
+                    grp[h].ix[i, 'eqt'] = 2.1
                     grp[h].ix[i, 'runoff'] = avail_rech - geo_k
                     grp[h].ix[i, 'recharge'] = geo_k
                 else:
+                    grp[h].ix[i, 'eqt'] = 2.2
                     grp[h].ix[i, 'runoff'] = 0
                     grp[h].ix[i, 'recharge'] = avail_rech
             elif (avail_water > wilt_pnt) and (avail_water < field_cap):
@@ -315,5 +320,4 @@ def plotfits(HUC, SITE, engine, fileloc, table):
 
     return ubm, acft, UBMmon, acgp, mrg
 
-if __name__ == '__main__':
-    main()
+
