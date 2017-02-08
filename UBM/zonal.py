@@ -5,21 +5,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0, prop = False):
+def calcvols(tablegdb, searchstr, source, variable, mult = 1.0, prop = False):
     """Calculates volume of water per zone in ac-ft. Uses output from zone_gdb. Created pandas DataFrame.
 
     :param tablegdb: Path to file geodatabase in which tables are stored
     :param searchstr: Search wildcard to select a subset of input tables; use astrix (*) for any string after search string
     :param source: Designate name of data source field
     :param variable: Designate name of data variable; ex. 'runoff'
-    :param stat: Type of statistic to bring into calculations; default is 'MEAN'
     :param mult: Multiplier to adjust values of input
     :return: pandas DataFrame of zonal values in ac-ft
     """
     arcpy.env.workspace = tablegdb
     tables = arcpy.ListTables(searchstr)
     fields = arcpy.ListFields(tables[0])
-    # for table in prism_tables:
+
     fieldlist = [field.name for field in fields]
 
     f = {}
@@ -37,10 +36,9 @@ def calcvols(tablegdb, searchstr, source, variable, stat='MEAN', mult = 1.0, pro
     if prop:
         g['volume_m_cubed'] = g['MEAN'] * mult
     else:
-        g['volume_m_cubed'] = g[stat] * g['AREA'] * mult
+        g['volume_m_cubed'] = g['MEAN'] * g['AREA'] * mult
     g['volume_acft'] = g['volume_m_cubed'] * 0.000810714
-    # g = g[(~g.YearMonth.str.contains('yr'))]
-    # g['dt'] = pd.to_datetime(g.YearMonth,errors='coerce',format='%Y%m')
+
     return g
 
 def get_zone(rast, z_Name, Zonal_HUCS, Zone_field):
