@@ -82,7 +82,7 @@ def runModel(mrg, geo_k=''):
         grp[h] = mrg[mrg['HUC_12'] == h]
         grp[h] = grp[h][~grp[h].index.duplicated(keep='first')]
 
-        soil_max = grp[h]['porosity'].mean()
+        soil_max = grp[h]['total soil moisture'].mean()
         field_cap = grp[h]['field capacity'].mean()
         if geo_k == '':
             geo_k = grp[h]['conductivity'].mean()
