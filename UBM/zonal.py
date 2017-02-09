@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def calcvols(tablegdb, searchstr, source, variable, mult = 1.0, prop = False):
+def calcvols(tablegdb, searchstr, source, variable, mult = 1.0):
     """Calculates volume of water per zone in ac-ft. Uses output from zone_gdb. Created pandas DataFrame.
 
     :param tablegdb: Path to file geodatabase in which tables are stored
@@ -33,10 +33,7 @@ def calcvols(tablegdb, searchstr, source, variable, mult = 1.0, prop = False):
     g.drop(['level_0', 'level_1', 'OBJECTID', 'ZONE_CODE'], axis=1, inplace=True)
     g['SOURCE'] = source
     g['variable'] = variable
-    if prop:
-        g['volume_m_cubed'] = g['MEAN'] * mult
-    else:
-        g['volume_m_cubed'] = g['MEAN'] * g['AREA'] * mult
+    g['volume_m_cubed'] = g['MEAN'] * g['AREA'] * mult
     g['volume_acft'] = g['volume_m_cubed'] * 0.000810714
 
     return g
@@ -93,17 +90,18 @@ def runModel(mrg, geo_k=''):
         wilt_pnt = grp[h]['wilting point'].mean()
         dates = pd.date_range(start=grp[h].index.min(), end=grp[h].index.max(), freq='MS')
 
-        for i in dates:
-            rain = grp[h].ix[i, 'precip as rain']
-            melt = grp[h].ix[i, 'snowmelt']
-            pet = grp[h].ix[i, 'evapotranspiration']
-            if i == dates[0]:
 
-                avail_water = rain + melt + field_cap
+        for i in dates:
+
+            inwater = grp[h].ix[i, 'snow and rain']
+            pet = grp[h].ix[i, 'PET']
+
+            if i == dates[0]:
+                avail_water = inwater + field_cap
             elif i.month == 1:
-                avail_water = rain + melt + grp[h].ix[pd.datetime(i.year - 1, 12, 1), 'avail_water']
+                avail_water = inwater + grp[h].ix[pd.datetime(i.year - 1, 12, 1), 'avail_water']
             else:
-                avail_water = rain + melt + grp[h].ix[pd.datetime(i.year, i.month - 1, 1), 'avail_water']
+                avail_water = inwater + grp[h].ix[pd.datetime(i.year, i.month - 1, 1), 'avail_water']
 
             if avail_water > soil_max:
 
@@ -112,7 +110,6 @@ def runModel(mrg, geo_k=''):
 
                 if avail_rech > geo_k:
                     grp[h].ix[i, 'eqt'] = 1.1
-
                     grp[h].ix[i, 'runoff'] = (avail_water - soil_max) + (avail_rech - geo_k)
                     grp[h].ix[i, 'recharge'] = geo_k
                 else:
@@ -148,7 +145,13 @@ def runModel(mrg, geo_k=''):
                 pass
 
             grp[h].ix[i, 'avail_rech'] = avail_rech
-            grp[h].ix[i, 'avail_water'] = avail_water
+
+            av_water_0 = avail_water - grp[h].ix[i, 'runoff'] - grp[h].ix[i, 'recharge'] - grp[h].ix[i, 'aet']
+            if av_water_0 > 0:
+                grp[h].ix[i, 'avail_water'] = av_water_0
+            else:
+                grp[h].ix[i, 'avail_water'] = 0
+
 
     if len(huc12list) > 1:
         df = pd.concat([grp[h] for h in huc12list])
