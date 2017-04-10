@@ -5,7 +5,13 @@ These are data input download and prep scripts. They download and massage the da
 from __future__ import absolute_import, division, print_function, unicode_literals
 import time
 import urllib
-import urllib2
+try:
+    # For Python 3.0 and later
+    import urllib.request
+except ImportError:
+    # Fall back to Python 2's urllib2
+    import urllib2
+
 import re
 import glob
 import os
