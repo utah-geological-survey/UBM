@@ -135,7 +135,10 @@ def runModel(mrg, geo_k=''):
                 grp[h].ix[i, 'eqt'] = 3
                 grp[h].ix[i, 'runoff'] = 0
                 grp[h].ix[i, 'recharge'] = 0
-                grp[h].ix[i, 'aet'] = pet
+                if avail_water - pet <= wilt_pnt:
+                    grp[h].ix[i, 'aet'] = 0
+                else:
+                    grp[h].ix[i, 'aet'] = pet
             elif avail_water < wilt_pnt:
                 avail_rech = 0
                 grp[h].ix[i, 'eqt'] = 4
