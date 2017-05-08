@@ -51,8 +51,8 @@ for y in range(years[0], years[1] + 1):  # set years converted here
         recharge2 = "Con(eval(av_recharge2) > geol_k, geol_k, eval(av_recharge2))"
         runoff2 = "Con(eval(av_recharge2) > geol_k, eval(av_recharge2) - geol_k, 0)"
         # Eq3 recharge3 = 0 runoff3 = 0 aet = pet_rast
-        av_evap = "av_soil_water - pet_rast"
-        aet3 = "Con(eval(av_evap) <= wilt_point, wilt_point, pet_rast)"
+        av_evap = "av_soil_water - wilt_point"
+        aet3 = "Con(eval(av_evap) <= wilt_point, eval(av_evap), pet_rast)"
         # Eq4 recharge3 = 0 runoff3 = 0 aet = 0
         # Order of if/then is Eq 1, Eq 4, Eq 2, Eq 3
 
