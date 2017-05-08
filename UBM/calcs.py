@@ -56,7 +56,8 @@ def UBM_calc(results, field_cap, wilt_point, T_soil_water, geol_k, avail_water, 
             runoff2 = "Con(eval(av_recharge2) > geol_k, eval(av_recharge2) - geol_k, 0)"
             
             # Eq3 recharge3 = 0 runoff3 = 0 aet = pet_rast
-            aet3 = "Con(av_soil_watr - pet_rast <= wilt_point, wilt_point, pet_rast)
+            av_evap = "av_soil_water - pet_rast"
+            aet3 = "Con(eval(av_evap) <= wilt_point, wilt_point, pet_rast)"
             # Eq4 recharge3 = 0 runoff3 = 0 aet = 0
 
             # Order of if/then is Eq 1, Eq 4, Eq 2, Eq 3
@@ -74,7 +75,7 @@ def UBM_calc(results, field_cap, wilt_point, T_soil_water, geol_k, avail_water, 
 
             aet = Con(av_soil_water > T_soil_water, pet_rast,
                       Con(av_soil_water < wilt_point, 0,
-                          Con((av_soil_water < T_soil_water) & (av_soil_water > field_cap), aet3,
+                          Con((av_soil_water < T_soil_water) & (av_soil_water > field_cap), eval(aet3),
                               Con((av_soil_water > wilt_point) & (av_soil_water < field_cap), pet_rast, 0))))
             aet.save(results + 'aet' + my)
 
