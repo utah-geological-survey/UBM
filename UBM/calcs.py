@@ -7,7 +7,7 @@ from arcpy.sa import *
 
 
 
-def calc_avail_water(path, path2, months='',years=''):
+def calc_avail_water(path, path2, months='' ,years=''):
 
     arcpy.env.workspace = path
     arcpy.env.overwriteOutput = True

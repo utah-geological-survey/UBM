@@ -54,11 +54,21 @@ def get_modis(tiles, save_path, months='', years=''):
                 time.sleep(0.5)
 
 
-def get_file_list(save_path):
-    return glob.glob(os.path.join(save_path, '*.105*.hdf'))
+def get_file_list(save_path, wld='*.105*.hdf'):
+    """
+
+    Args:
+        save_path: path to folder where raw MODIS files are
+        wld: common wildcard in all of the raw MODIS files
+
+    Returns:
+        list of files to analyze in the raw folder
+
+    """
+    return glob.glob(os.path.join(save_path, wld))
 
 
-def reproject_modis(files, save_path, data_type, proj=102003):
+def reproject_modis(files, save_path, data_type, eight_day=True, proj=102003):
     """Iterates through MODIS files in a folder reprojecting them.
 
     Takes the crazy MODIS sinusoidal projection to a user defined projection.
@@ -67,6 +77,7 @@ def reproject_modis(files, save_path, data_type, proj=102003):
         files: list of file paths of MODIS hdf files; created using files = glob.glob(os.path.join(save_path, '*.105*.hdf'))
         save_path: folder to store the reprojected files
         data_type: type of MODIS16 data being reprojected; options are 'ET','PET','LE', and 'PLE'
+        eight_day: time span of modis file; Bool where default is true (input 8-day rasters)
         proj: projection of output data by epsg number; default is nad83 zone 12
     Returns:
         Reprojected MODIS files
@@ -76,6 +87,8 @@ def reproject_modis(files, save_path, data_type, proj=102003):
     The EPSG code for Albers Equal Area is 102003
     http://files.ntsg.umt.edu/data/NTSG_Products/MOD16/MOD16_global_evapotranspiration_description.pdf
     https://modis-land.gsfc.nasa.gov/MODLAND_grid.html
+    https://lpdaac.usgs.gov/dataset_discovery/modis/modis_products_table/mod16a2_v006<
+    https://search.earthdata.nasa.gov/search/granules?p=C1000000524-LPDAAC_ECS&m=36.87890625!-114.50390625!5!1!0!0%2C2&tl=1503517150!4!!&q=MOD16A2+V006&sb=-114.29296875%2C36.80859375%2C-109.96875%2C42.2578125
     """
     import pymodis
     # dictionary to designate a directory
@@ -89,11 +102,21 @@ def reproject_modis(files, save_path, data_type, proj=102003):
         print('created {:}'.format(save_path + datadir[data_type]))
 
     for f in files:
-        year = f.split('\\')[1].split('.')[1][1:5]  # parse year from hdf filename
-        month = f.split('\\')[1].split('.')[1][-2:]  # parse month from hdf filename
+        year = f.split('\\')[1].split('.')[1][1:5]
+
         v = f.split('\\')[1].split('.')[2][-2:]  # parse v (cell coordinate) from hdf filename
         h = f.split('\\')[1].split('.')[2][1:3]  # parse h (cell coordinate) from hdf filename
-        pref = os.path.join(save_path + datadir[data_type] + 'A' + year + 'M' + month + 'h' + h + 'v' + v)
+
+        # names file based on time span of input rasters; 8-day by default
+        if eight_day:
+            doy = f.split('\\')[1].split('.')[1][-3:]  # parse day of year from hdf filename
+            fname = 'A' + year + 'D' + doy + 'h' + h + 'v' + v
+            pref = os.path.join(save_path + datadir[data_type] + fname)
+        else:
+            month = f.split('\\')[1].split('.')[1][-2:]  # parse month from hdf filename
+            fname = 'A' + year + 'M' + month + 'h' + h + 'v' + v
+            pref = os.path.join(save_path + datadir[data_type] + fname)
+
         convertsingle = pymodis.convertmodis_gdal.convertModisGDAL(hdfname=f, prefix=pref,
                                                                    subset=matrdir[data_type],
                                                                    res=1000, epsg=proj)
@@ -101,7 +124,7 @@ def reproject_modis(files, save_path, data_type, proj=102003):
         try:
             convertsingle.run()
         except:
-            print('A' + year + 'M' + month + 'h' + h + 'v' + v + ' failed!')
+            print(fname + ' failed!')
             pass
 
 
@@ -127,7 +150,7 @@ def clip_and_fix(path, outpath, data_type, area=''):
     arcpy.env.mask = area
     arcpy.CheckOutExtension("spatial")
     for rast in arcpy.ListRasters():
-        calc = SetNull(arcpy.Raster(rast) > 32760, arcpy.Raster(rast))
+        calc = SetNull(arcpy.Raster(rast) > 32700, arcpy.Raster(rast))
         calc.save(outpath + data_type + rast[1:5] + rast[6:8] + 'h' + rast[10:11] + 'v' + rast[13:14])
         print(outpath + data_type + rast[1:5] + rast[6:8] + 'h' + rast[10:11] + 'v' + rast[13:14])
 
