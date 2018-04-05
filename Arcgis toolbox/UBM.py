@@ -75,6 +75,6 @@ for y in range(years[0], years[1] + 1):  # set years converted here
         aet.save(results + '/aet' + my)
 
         av_soil_water = av_soil_water - runoff - recharge - aet
-        av_soil_water = Con(av_soil_water > 0.0, av_soil_water, 0.0)
+        #av_soil_water = Con(av_soil_water > 0.0, av_soil_water, 0.0)
         av_soil_water.save(results + '/asw' + my)
         arcpy.AddMessage('You made a BM for ' + my + '!')
