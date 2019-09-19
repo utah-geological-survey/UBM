@@ -6,5 +6,5 @@ A modified version of the Basin Characterization Model (BCM) to calculate rechar
 
 to install use <a href='https://pip.pypa.io/en/stable/installing/'>pip</a>
 ```
->>>pip install https://github.com/inkenbrandt/UBM/zipball/master
+>>>pip install https://github.com/utah-geological-survey/UBM/zipball/master
 ```
